@@ -9,6 +9,7 @@ package ua.kpi.comsys.test2.implementation;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
+import java.util.Objects;
 
 import ua.kpi.comsys.test2.NumberList;
 
@@ -30,7 +32,7 @@ import ua.kpi.comsys.test2.NumberList;
  * </ul>
  *
  * @author Alexander Podrubailo (Student ID: 3317)
- * @version 1.0
+ * @version 1.1
  */
 public class NumberListImpl implements NumberList {
 
@@ -70,11 +72,11 @@ public class NumberListImpl implements NumberList {
         this();
         try (Scanner scanner = new Scanner(file)) {
             if (scanner.hasNextLine()) {
-                String line = scanner.nextLine().trim();
+                String line = scanner.nextLine();
                 initFromDecimalString(line);
             }
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            // Ignored as per test expectations for non-existent files
         }
     }
 
@@ -92,27 +94,36 @@ public class NumberListImpl implements NumberList {
     /**
      * Helper method to initialize the list from a decimal string.
      * Converts the Decimal String to an Octal List representation.
+     * <p>
+     * Uses BigInteger to handle arbitrarily large numbers.
      *
      * @param value the decimal number string.
      */
     private void initFromDecimalString(String value) {
-        if (value == null || value.isEmpty()) return;
+        if (value == null || value.trim().isEmpty()) return;
         
         try {
-            long decimalValue = Long.parseLong(value);
-            if (decimalValue == 0) {
+            // FIX: Use BigInteger for huge numbers (tests use numbers larger than Long.MAX_VALUE)
+            BigInteger bigInt = new BigInteger(value.trim());
+            
+            // Requirement usually implies positive numbers for this structure
+            if (bigInt.compareTo(BigInteger.ZERO) < 0) {
+                return; 
+            }
+
+            if (bigInt.equals(BigInteger.ZERO)) {
                 add((byte) 0);
                 return;
             }
             
-            // Convert to octal system
-            String octalString = Long.toOctalString(decimalValue);
+            // Convert BigInteger to octal string (base 8)
+            String octalString = bigInt.toString(8);
             for (char c : octalString.toCharArray()) {
                 byte digit = (byte) Character.getNumericValue(c);
                 add(digit);
             }
         } catch (NumberFormatException e) {
-            System.err.println("Invalid number format: " + value);
+            // Invalid format (e.g. letters), list remains empty as expected by tests
         }
     }
 
@@ -148,9 +159,6 @@ public class NumberListImpl implements NumberList {
      * @return a new {@code NumberListImpl} containing decimal digits.
      */
     public NumberListImpl changeScale() {
-        // Current list is in Octal, need to return Decimal.
-        // We use unsafeAdd to bypass the 0-7 range check for decimal digits (0-9).
-
         NumberListImpl decimalList = new NumberListImpl();
         String decimalStr = toDecimalString(); 
 
@@ -163,9 +171,6 @@ public class NumberListImpl implements NumberList {
 
     /**
      * Performs the Bitwise OR operation (C7 = 6).
-     * <p>
-     * The operation is performed bitwise on the octal digits of this list and the argument list.
-     * Alignment is performed on the least significant digits.
      *
      * @param arg the second operand of the operation.
      * @return a new {@code NumberListImpl} representing the result of the OR operation.
@@ -181,7 +186,6 @@ public class NumberListImpl implements NumberList {
 
         int maxLen = Math.max(this.size, other.size);
         
-        // Use a temporary list to collect digits because we traverse from the end
         List<Byte> tempResult = new ArrayList<>();
 
         for (int i = 0; i < maxLen; i++) {
@@ -197,12 +201,10 @@ public class NumberListImpl implements NumberList {
                 p2 = p2.prev;
             }
 
-            // Bitwise OR on digits
             byte res = (byte) (val1 | val2);
             tempResult.add(res);
         }
 
-        // Add to result in reverse order
         for (int i = tempResult.size() - 1; i >= 0; i--) {
             result.add(tempResult.get(i));
         }
@@ -219,17 +221,19 @@ public class NumberListImpl implements NumberList {
     public String toDecimalString() {
         if (size == 0) return "0";
         
-        long decimalValue = 0;
-        long multiplier = 1;
+        // FIX: Use BigInteger calculation to avoid overflow on large lists
+        BigInteger decimalValue = BigInteger.ZERO;
+        BigInteger multiplier = BigInteger.ONE;
+        BigInteger base = BigInteger.valueOf(8);
 
-        // Traverse from the end (least significant to most significant)
         Node current = head.prev;
         for (int i = 0; i < size; i++) {
-            decimalValue += current.value * multiplier;
-            multiplier *= 8;
+            BigInteger digit = BigInteger.valueOf(current.value);
+            decimalValue = decimalValue.add(digit.multiply(multiplier));
+            multiplier = multiplier.multiply(base);
             current = current.prev;
         }
-        return String.valueOf(decimalValue);
+        return decimalValue.toString();
     }
 
     /**
@@ -247,6 +251,36 @@ public class NumberListImpl implements NumberList {
             current = current.next;
         } while (current != head);
         return sb.toString();
+    }
+
+    // --- FIX: Added equals and hashCode for correct test comparisons ---
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof NumberListImpl)) return false;
+        NumberListImpl that = (NumberListImpl) o;
+        
+        if (this.size != that.size) return false;
+        if (this.size == 0) return true;
+
+        Iterator<Byte> it1 = this.iterator();
+        Iterator<Byte> it2 = that.iterator();
+
+        while (it1.hasNext() && it2.hasNext()) {
+            if (!Objects.equals(it1.next(), it2.next())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hashCode = 1;
+        for (Byte e : this)
+            hashCode = 31 * hashCode + (e == null ? 0 : e.hashCode());
+        return hashCode;
     }
 
     // --- List methods implementation ---
@@ -316,14 +350,6 @@ public class NumberListImpl implements NumberList {
         return a;
     }
 
-    /**
-     * Appends the specified element to the end of this list.
-     * Ensures the element is a valid Octal digit (0-7).
-     *
-     * @param e element to be appended to this list
-     * @return <tt>true</tt> (as specified by {@link Collection#add})
-     * @throws IllegalArgumentException if the element is not between 0 and 7.
-     */
     @Override
     public boolean add(Byte e) {
         if (e < 0 || e > 7) {
@@ -333,12 +359,6 @@ public class NumberListImpl implements NumberList {
         return true;
     }
     
-    /**
-     * Internal add method without range check.
-     * Used for building Decimal lists in changeScale().
-     *
-     * @param e the byte to add.
-     */
     private void unsafeAdd(Byte e) {
         Node newNode = new Node(e);
         if (head == null) {
@@ -369,9 +389,6 @@ public class NumberListImpl implements NumberList {
         return false;
     }
     
-    /**
-     * Helper to unlink a node from the circular list.
-     */
     private void removeNode(Node node) {
         if (size == 1) {
             head = null;
@@ -424,7 +441,6 @@ public class NumberListImpl implements NumberList {
             for (int i = 0; i < index; i++) {
                 current = current.next;
             }
-            // Insert before current
             Node pred = current.prev;
             pred.next = newNode;
             newNode.prev = pred;
@@ -460,9 +476,6 @@ public class NumberListImpl implements NumberList {
 
     // --- NumberList specific methods ---
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public boolean swap(int index1, int index2) {
         if (index1 < 0 || index1 >= size || index2 < 0 || index2 >= size) return false;
@@ -481,13 +494,9 @@ public class NumberListImpl implements NumberList {
         return true;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void sortAscending() {
         if (size <= 1) return;
-        // Bubble sort for simplicity
         for (int i = 0; i < size; i++) {
             Node current = head;
             for (int j = 0; j < size - 1; j++) {
@@ -501,9 +510,6 @@ public class NumberListImpl implements NumberList {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void sortDescending() {
         if (size <= 1) return;
@@ -520,25 +526,19 @@ public class NumberListImpl implements NumberList {
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void shiftLeft() {
         if (size <= 1) return;
         head = head.next;
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void shiftRight() {
         if (size <= 1) return;
         head = head.prev;
     }
 
-    // --- Unimplemented methods (optional for this assignment) ---
+    // --- Unimplemented methods ---
 
     @Override
     public boolean containsAll(Collection<?> c) {
