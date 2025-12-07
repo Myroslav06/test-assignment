@@ -21,16 +21,22 @@ import ua.kpi.comsys.test2.NumberList;
 
 /**
  * Custom implementation of NumberList interface.
- * Variant: 3317
- * C3 = 2 (Circular Doubly Linked List)
- * C5 = 2 (Octal system - base 8)
- * C7 = 6 (Bitwise OR)
+ * <p>
+ * This implementation is based on the student variant <b>3317</b>:
+ * <ul>
+ * <li><b>C3 = 2</b>: Circular Doubly Linked List</li>
+ * <li><b>C5 = 2</b>: Octal system (Base-8, digits 0-7)</li>
+ * <li><b>C7 = 6</b>: Bitwise OR operation</li>
+ * </ul>
  *
  * @author Alexander Podrubailo (Student ID: 3317)
+ * @version 1.0
  */
 public class NumberListImpl implements NumberList {
 
-    // Inner class for the doubly linked list node
+    /**
+     * Inner class representing a node in the doubly linked list.
+     */
     private static class Node {
         Byte value;
         Node next;
@@ -45,7 +51,9 @@ public class NumberListImpl implements NumberList {
     private int size;
 
     /**
-     * Default constructor. Returns empty <tt>NumberListImpl</tt>
+     * Default constructor.
+     * <p>
+     * Creates an empty {@code NumberListImpl}.
      */
     public NumberListImpl() {
         this.head = null;
@@ -53,10 +61,10 @@ public class NumberListImpl implements NumberList {
     }
 
     /**
-     * Constructs new <tt>NumberListImpl</tt> by <b>decimal</b> number
-     * from file, defined in string format.
+     * Constructs a new {@code NumberListImpl} using a <b>decimal</b> number
+     * read from a file.
      *
-     * @param file - file where number is stored.
+     * @param file the file containing the number string.
      */
     public NumberListImpl(File file) {
         this();
@@ -71,18 +79,22 @@ public class NumberListImpl implements NumberList {
     }
 
     /**
-     * Constructs new <tt>NumberListImpl</tt> by <b>decimal</b> number
-     * in string notation.
+     * Constructs a new {@code NumberListImpl} using a <b>decimal</b> number
+     * string representation.
      *
-     * @param value - number in string notation.
+     * @param value the number in string notation (decimal).
      */
     public NumberListImpl(String value) {
         this();
         initFromDecimalString(value);
     }
 
-    // Helper method to initialize from a decimal string
-    // Converts Decimal String -> Octal List
+    /**
+     * Helper method to initialize the list from a decimal string.
+     * Converts the Decimal String to an Octal List representation.
+     *
+     * @param value the decimal number string.
+     */
     private void initFromDecimalString(String value) {
         if (value == null || value.isEmpty()) return;
         
@@ -105,10 +117,10 @@ public class NumberListImpl implements NumberList {
     }
 
     /**
-     * Saves the number, stored in the list, into specified file
-     * in <b>decimal</b> scale of notation.
+     * Saves the number stored in the list into the specified file
+     * in <b>decimal</b> notation.
      *
-     * @param file - file where number has to be stored.
+     * @param file the file where the number has to be stored.
      */
     public void saveList(File file) {
         try (PrintWriter writer = new PrintWriter(file)) {
@@ -119,35 +131,44 @@ public class NumberListImpl implements NumberList {
     }
 
     /**
-     * Returns student's record book number.
-     * @return student's record book number.
+     * Returns the student's record book number used to determine the variant.
+     *
+     * @return the student's record book number (3317).
      */
     public static int getRecordBookNumber() {
         return 3317;
     }
 
     /**
-     * Returns new <tt>NumberListImpl</tt> which represents the same number
-     * in other scale of notation (Decimal).
-     * Variant requires change to Decimal (C5 + 1) % 5 = 3 -> Decimal.
+     * Returns a new {@code NumberListImpl} which represents the same number
+     * in the Decimal scale of notation.
+     * <p>
+     * Calculated as: (C5 + 1) % 5 = 3 (Decimal).
+     *
+     * @return a new {@code NumberListImpl} containing decimal digits.
      */
     public NumberListImpl changeScale() {
         // Current list is in Octal, need to return Decimal.
-        // Since this class is designed for Octal (0-7), but we need to store Decimal digits (0-9),
-        // we will use unsafeAdd to bypass the range check.
+        // We use unsafeAdd to bypass the 0-7 range check for decimal digits (0-9).
 
         NumberListImpl decimalList = new NumberListImpl();
-        String decimalStr = toDecimalString(); // Convert current number to string "123"
+        String decimalStr = toDecimalString(); 
 
         for (char c : decimalStr.toCharArray()) {
             byte val = (byte) Character.getNumericValue(c);
-            decimalList.unsafeAdd(val); // Use method without < 8 check
+            decimalList.unsafeAdd(val); 
         }
         return decimalList;
     }
 
     /**
-     * Bitwise OR operation (C7 = 6).
+     * Performs the Bitwise OR operation (C7 = 6).
+     * <p>
+     * The operation is performed bitwise on the octal digits of this list and the argument list.
+     * Alignment is performed on the least significant digits.
+     *
+     * @param arg the second operand of the operation.
+     * @return a new {@code NumberListImpl} representing the result of the OR operation.
      */
     public NumberListImpl additionalOperation(NumberList arg) {
         NumberListImpl other = (NumberListImpl) arg;
@@ -155,15 +176,12 @@ public class NumberListImpl implements NumberList {
         
         if (this.isEmpty() && other.isEmpty()) return result;
 
-        // OR operation for octal numbers is performed bitwise.
-        // Aligning to the right (least significant digits).
-        
         Node p1 = (this.head != null) ? this.head.prev : null;
         Node p2 = (other.head != null) ? other.head.prev : null;
 
         int maxLen = Math.max(this.size, other.size);
         
-        // Collecting result in a temporary list because we are traversing from the end
+        // Use a temporary list to collect digits because we traverse from the end
         List<Byte> tempResult = new ArrayList<>();
 
         for (int i = 0; i < maxLen; i++) {
@@ -184,7 +202,7 @@ public class NumberListImpl implements NumberList {
             tempResult.add(res);
         }
 
-        // Write to result in reverse order (since we collected from the end)
+        // Add to result in reverse order
         for (int i = tempResult.size() - 1; i >= 0; i--) {
             result.add(tempResult.get(i));
         }
@@ -193,7 +211,10 @@ public class NumberListImpl implements NumberList {
     }
 
     /**
-     * Returns string representation in <b>decimal</b> scale.
+     * Returns the string representation of the number stored in the list
+     * converted to the <b>decimal</b> scale of notation.
+     *
+     * @return the string representation in decimal scale.
      */
     public String toDecimalString() {
         if (size == 0) return "0";
@@ -201,7 +222,7 @@ public class NumberListImpl implements NumberList {
         long decimalValue = 0;
         long multiplier = 1;
 
-        // Going from the end (least significant to most significant)
+        // Traverse from the end (least significant to most significant)
         Node current = head.prev;
         for (int i = 0; i < size; i++) {
             decimalValue += current.value * multiplier;
@@ -211,6 +232,11 @@ public class NumberListImpl implements NumberList {
         return String.valueOf(decimalValue);
     }
 
+    /**
+     * Returns the string representation of the number in its current (Octal) notation.
+     *
+     * @return the string representation of the list elements.
+     */
     @Override
     public String toString() {
         if (head == null) return "";
@@ -275,6 +301,7 @@ public class NumberListImpl implements NumberList {
         return arr;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> T[] toArray(T[] a) {
         if (a.length < size)
@@ -289,7 +316,14 @@ public class NumberListImpl implements NumberList {
         return a;
     }
 
-    // Main add method (for Octal system)
+    /**
+     * Appends the specified element to the end of this list.
+     * Ensures the element is a valid Octal digit (0-7).
+     *
+     * @param e element to be appended to this list
+     * @return <tt>true</tt> (as specified by {@link Collection#add})
+     * @throws IllegalArgumentException if the element is not between 0 and 7.
+     */
     @Override
     public boolean add(Byte e) {
         if (e < 0 || e > 7) {
@@ -299,7 +333,12 @@ public class NumberListImpl implements NumberList {
         return true;
     }
     
-    // Add method without range check (for changeScale)
+    /**
+     * Internal add method without range check.
+     * Used for building Decimal lists in changeScale().
+     *
+     * @param e the byte to add.
+     */
     private void unsafeAdd(Byte e) {
         Node newNode = new Node(e);
         if (head == null) {
@@ -318,7 +357,6 @@ public class NumberListImpl implements NumberList {
 
     @Override
     public boolean remove(Object o) {
-        // Simple implementation: remove first occurrence
         if (head == null) return false;
         Node current = head;
         for (int i = 0; i < size; i++) {
@@ -331,6 +369,9 @@ public class NumberListImpl implements NumberList {
         return false;
     }
     
+    /**
+     * Helper to unlink a node from the circular list.
+     */
     private void removeNode(Node node) {
         if (size == 1) {
             head = null;
@@ -417,8 +458,11 @@ public class NumberListImpl implements NumberList {
         return -1;
     }
 
-    // --- NumberList methods ---
+    // --- NumberList specific methods ---
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean swap(int index1, int index2) {
         if (index1 < 0 || index1 >= size || index2 < 0 || index2 >= size) return false;
@@ -437,10 +481,13 @@ public class NumberListImpl implements NumberList {
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void sortAscending() {
         if (size <= 1) return;
-        // Bubble sort for simplicity with pointers
+        // Bubble sort for simplicity
         for (int i = 0; i < size; i++) {
             Node current = head;
             for (int j = 0; j < size - 1; j++) {
@@ -454,6 +501,9 @@ public class NumberListImpl implements NumberList {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void sortDescending() {
         if (size <= 1) return;
@@ -470,19 +520,25 @@ public class NumberListImpl implements NumberList {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void shiftLeft() {
         if (size <= 1) return;
         head = head.next;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void shiftRight() {
         if (size <= 1) return;
         head = head.prev;
     }
 
-    // --- Unimplemented or less important methods ---
+    // --- Unimplemented methods (optional for this assignment) ---
 
     @Override
     public boolean containsAll(Collection<?> c) {
